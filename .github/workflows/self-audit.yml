@@ -1,0 +1,35 @@
+name: Self-Audit Demo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  audit-hardened-server:
+    name: Gate Hardened Example MCP Server
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Scan hardened server (expected PASS)
+        uses: ./
+        with:
+          command: "python examples/hardened_mcp_server.py"
+          format: "sarif"
+          output-file: "hardened.sarif"
+          fail-on: "low"
+          fuzz: "true"
+
+      - name: Scan vulnerable server (diagnostic demonstration)
+        uses: ./
+        with:
+          command: "python examples/vulnerable_mcp_server.py"
+          format: "sarif"
+          output-file: "vulnerable.sarif"
+          fail-on: "none"
+          fuzz: "true"

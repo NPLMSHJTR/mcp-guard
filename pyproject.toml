@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mcp-guard"
+version = "0.1.0"
+description = "Security scanner, JSON Schema contract validator, chaos fault injector, and interactive studio for Model Context Protocol (MCP) servers."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [
+    { name = "MCP-Guard Contributors" },
+]
+keywords = [
+    "mcp",
+    "model-context-protocol",
+    "ai-security",
+    "prompt-injection",
+    "tool-poisoning",
+    "contract-testing",
+    "chaos-engineering",
+    "sarif",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Software Development :: Testing",
+]
+dependencies = []
+
+[project.optional-dependencies]
+studio = ["gradio>=4.0"]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+mcp-guard = "mcp_guard.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-ra"

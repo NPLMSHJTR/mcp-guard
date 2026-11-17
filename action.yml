@@ -1,0 +1,98 @@
+name: "MCP-Guard Security & Contract Gate"
+description: "Scan Model Context Protocol (MCP) servers and tool definitions for prompt injection, tool poisoning, schema flaws, and fuzz crashes."
+author: "MCP-Guard Contributors"
+branding:
+  icon: "shield"
+  color: "blue"
+
+inputs:
+  command:
+    description: "Shell command to launch an MCP stdio server (e.g. 'python my_server.py'). Mutually optional with tools-file."
+    required: false
+    default: ""
+  tools-file:
+    description: "Path to a JSON/JSONL file containing MCP tool definitions."
+    required: false
+    default: ""
+  format:
+    description: "Output report format: console, json, markdown, sarif, html."
+    required: false
+    default: "markdown"
+  output-file:
+    description: "Optional path to write the generated report."
+    required: false
+    default: ""
+  fail-on:
+    description: "Minimum severity threshold that causes the action to fail: critical, high, medium, low, none."
+    required: false
+    default: "high"
+  fuzz:
+    description: "Run boundary fuzz tests against the live stdio command in addition to static scanning."
+    required: false
+    default: "false"
+
+outputs:
+  findings-count:
+    description: "Total number of findings detected."
+    value: ${{ steps.run-guard.outputs.findings_count }}
+  critical-count:
+    description: "Number of CRITICAL findings detected."
+    value: ${{ steps.run-guard.outputs.critical_count }}
+  passed:
+    description: "Whether the scan passed the configured fail-on policy (true/false)."
+    value: ${{ steps.run-guard.outputs.passed }}
+  report-path:
+    description: "Path to the saved report file if output-file was specified."
+    value: ${{ steps.run-guard.outputs.report_path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run MCP-Guard Audit
+      id: run-guard
+      shell: python
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        INPUT_COMMAND: ${{ inputs.command }}
+        INPUT_TOOLS_FILE: ${{ inputs.tools-file }}
+        INPUT_FORMAT: ${{ inputs.format }}
+        INPUT_OUTPUT_FILE: ${{ inputs.output-file }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_FUZZ: ${{ inputs.fuzz }}
+      run: |
+        import json
+        import os
+        import subprocess
+        import sys
+        from pathlib import Path
+
+        action_src = str(Path(os.environ["ACTION_PATH"]) / "src")
+        sys.path.insert(0, action_src)
+
+        from mcp_guard.models import Severity
+        from mcp_guard.cli import execute_scan_for_action
+
+        result = execute_scan_for_action(
+            cmd=os.environ.get("INPUT_COMMAND", "").strip() or None,
+            tools_file=os.environ.get("INPUT_TOOLS_FILE", "").strip() or None,
+            report_format=os.environ.get("INPUT_FORMAT", "markdown").strip(),
+            output_file=os.environ.get("INPUT_OUTPUT_FILE", "").strip() or None,
+            fail_on=os.environ.get("INPUT_FAIL_ON", "high").strip(),
+            run_fuzz=os.environ.get("INPUT_FUZZ", "false").strip().lower() == "true",
+        )
+
+        gh_output = os.environ.get("GITHUB_OUTPUT")
+        if gh_output:
+            with open(gh_output, "a", encoding="utf-8") as fh:
+                fh.write(f"findings_count={result['findings_count']}\n")
+                fh.write(f"critical_count={result['critical_count']}\n")
+                fh.write(f"passed={str(result['passed']).lower()}\n")
+                fh.write(f"report_path={result.get('report_path', '')}\n")
+
+        gh_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+        if gh_summary and result.get("markdown_summary"):
+            with open(gh_summary, "a", encoding="utf-8") as fh:
+                fh.write(result["markdown_summary"] + "\n")
+
+        if not result["passed"]:
+            sys.exit(1)
