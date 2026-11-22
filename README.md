@@ -1,5 +1,7 @@
 # MCP-Guard & Studio
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 > **Security scanner, JSON Schema contract validator, live boundary fuzzer, chaos fault proxy, and interactive studio for Model Context Protocol (MCP) servers.**
 
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
@@ -60,6 +62,20 @@ mcp-guard studio --port 8765
 ```
 
 ---
+
+### Standard Workflow Example
+
+```bash
+# Step 1: Audit an MCP server with static rules + boundary fuzzer and record a baseline trace
+mcp-guard scan --cmd "python my_mcp_server.py" --fuzz --save-trace baseline.mcp-trace.json
+
+# Step 2: Inject chaos faults (429/500/timeout/drift) to verify host agent resilience
+mcp-guard chaos --cmd "python my_mcp_server.py" --all-faults
+
+# Step 3: Detect contract drift in CI and export GitHub SARIF 2.1.0
+mcp-guard replay --trace baseline.mcp-trace.json --cmd "python my_mcp_server.py"
+mcp-guard scan --cmd "python my_mcp_server.py" --format sarif --output mcp-guard.sarif --fail-on high
+```
 
 ## Built-in Detection Rules (20 Rules)
 
